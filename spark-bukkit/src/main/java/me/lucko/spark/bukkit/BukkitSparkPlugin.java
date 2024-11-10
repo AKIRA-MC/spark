@@ -20,9 +20,8 @@
 
 package me.lucko.spark.bukkit;
 
+import fr.akiramc.bukkit.command.EngineCommandMap;
 import me.lucko.spark.api.Spark;
-import me.lucko.spark.bukkit.placeholder.SparkMVdWPlaceholders;
-import me.lucko.spark.bukkit.placeholder.SparkPlaceholderApi;
 import me.lucko.spark.common.SparkPlatform;
 import me.lucko.spark.common.SparkPlugin;
 import me.lucko.spark.common.monitor.ping.PlayerPingProvider;
@@ -35,13 +34,18 @@ import me.lucko.spark.common.sampler.source.SourceMetadata;
 import me.lucko.spark.common.tick.TickHook;
 import me.lucko.spark.common.tick.TickReporter;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
-import org.bukkit.ChatColor;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
+import org.bukkit.craftbukkit.v1_8_R3.CraftServer;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -56,8 +60,6 @@ public class BukkitSparkPlugin extends JavaPlugin implements SparkPlugin {
 
     private SparkPlatform platform;
 
-    private CommandExecutor tpsCommand = null;
-
     @Override
     public void onEnable() {
         this.audienceFactory = BukkitAudiences.create(this);
@@ -66,53 +68,33 @@ public class BukkitSparkPlugin extends JavaPlugin implements SparkPlugin {
         this.platform = new SparkPlatform(this);
         this.platform.enable();
 
-        // override Spigot's TPS command with our own.
-        if (this.platform.getConfiguration().getBoolean("overrideTpsCommand", true)) {
-            this.tpsCommand = (sender, command, label, args) -> {
-                if (!sender.hasPermission("spark") && !sender.hasPermission("spark.tps") && !sender.hasPermission("bukkit.command.tps")) {
-                    sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
-                    return true;
-                }
+        Bukkit.getScheduler().runTaskLater(this, this::initCommands, 5 * 20L);
+    }
 
-                BukkitCommandSender s = new BukkitCommandSender(sender, this.audienceFactory) {
-                    @Override
-                    public boolean hasPermission(String permission) {
-                        return true;
-                    }
-                };
-                this.platform.executeCommand(s, new String[]{"tps"});
+    public void initCommands() {
+        EngineCommandMap commandMap = (EngineCommandMap) ((CraftServer) getServer()).getCommandMap();
+        commandMap.register("", new Command("spark") {
+            @Override
+            public boolean execute(@NotNull CommandSender commandSender, @NotNull String s, @NotNull String[] strings) {
+                platform.executeCommand(new BukkitCommandSender(commandSender, audienceFactory), strings);
                 return true;
-            };
-            CommandMapUtil.registerCommand(this, this.tpsCommand, "tps");
-        }
+            }
 
-        if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-            new SparkPlaceholderApi(this, this.platform);
-            getLogger().info("Registered PlaceholderAPI placeholders");
-        }
-        if (getServer().getPluginManager().isPluginEnabled("MVdWPlaceholderAPI")) {
-            new SparkMVdWPlaceholders(this, this.platform);
-            getLogger().info("Registered MVdWPlaceholderAPI placeholders");
-        }
+            @Override
+            public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args, @Nullable Location location) throws IllegalArgumentException {
+                return tabComplete(sender, alias, args);
+            }
+
+            @Override
+            public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+                return platform.tabCompleteCommand(new BukkitCommandSender(sender, audienceFactory), args);
+            }
+        });
     }
 
     @Override
     public void onDisable() {
         this.platform.disable();
-        if (this.tpsCommand != null) {
-            CommandMapUtil.unregisterCommand(this.tpsCommand);
-        }
-    }
-
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        this.platform.executeCommand(new BukkitCommandSender(sender, this.audienceFactory), args);
-        return true;
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        return this.platform.tabCompleteCommand(new BukkitCommandSender(sender, this.audienceFactory), args);
     }
 
     @Override
@@ -165,21 +147,8 @@ public class BukkitSparkPlugin extends JavaPlugin implements SparkPlugin {
 
     @Override
     public TickHook createTickHook() {
-        if (classExists("com.destroystokyo.paper.event.server.ServerTickStartEvent")) {
-            getLogger().info("Using Paper ServerTickStartEvent for tick monitoring");
-            return new PaperTickHook(this);
-        } else {
-            getLogger().info("Using Bukkit scheduler for tick monitoring");
-            return new BukkitTickHook(this);
-        }
-    }
-
-    @Override
-    public TickReporter createTickReporter() {
-        if (classExists("com.destroystokyo.paper.event.server.ServerTickStartEvent")) {
-            return new PaperTickReporter(this);
-        }
-        return null;
+        getLogger().info("Using Bukkit scheduler for tick monitoring");
+        return new BukkitTickHook(this);
     }
 
     @Override

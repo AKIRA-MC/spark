@@ -43,11 +43,6 @@ public class InstrumentationClassFinder implements ClassFinder {
         Instrumentation instrumentation = null;
         try {
             instrumentation = ByteBuddyAgent.install();
-            if (!warned && JavaVersion.getJavaVersion() >= 21) {
-                warned = true;
-                plugin.log(Level.INFO, "If you see a warning above that says \"WARNING: A Java agent has been loaded dynamically\", it can be safely ignored.");
-                plugin.log(Level.INFO, "See here for more information: https://spark.lucko.me/docs/misc/Java-agent-warning");
-            }
         } catch (Exception e) {
             // ignored
         }

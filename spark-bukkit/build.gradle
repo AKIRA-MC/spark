@@ -9,8 +9,11 @@ java {
 dependencies {
     implementation project(':spark-common')
     implementation 'net.kyori:adventure-platform-bukkit:4.3.3'
-    compileOnly 'io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT'
-    
+    compileOnly "fr.akiramc:spigot:1.8.8"
+    compileOnly "fr.akiramc:bukkit-engine:2.0.0"
+    compileOnly "fr.akiramc:shared-client:2.0.0"
+    compileOnly "fr.akiramc:shared-api:2.0.0"
+
     // placeholders
     compileOnly 'me.clip:placeholderapi:2.10.3'
     compileOnly('be.maximvdw:MVdWPlaceholderAPI:3.0.1-SNAPSHOT') {
@@ -19,6 +22,21 @@ dependencies {
 }
 
 repositories {
+    maven {
+        url 'https://repo.akiramc.fr/client/'
+        credentials {
+            username = findProperty("akiraBaseUsername") ?: ""
+            password = findProperty("akiraBasePassword") ?: ""
+        }
+    }
+    maven {
+        url 'https://repo.akiramc.fr/base/'
+        credentials {
+            username = findProperty("akiraBaseUsername") ?: ""
+            password = findProperty("akiraBasePassword") ?: ""
+        }
+    }
+
     maven { url "https://repo.papermc.io/repository/maven-public/" }
 }
 

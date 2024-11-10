@@ -20,6 +20,9 @@
 
 package me.lucko.spark.bukkit;
 
+import fr.akiramc.shared.API;
+import fr.akiramc.shared.profile.Profile;
+import fr.akiramc.shared.rank.RankWeight;
 import me.lucko.spark.common.command.sender.AbstractCommandSender;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
@@ -57,6 +60,11 @@ public class BukkitCommandSender extends AbstractCommandSender<CommandSender> {
 
     @Override
     public boolean hasPermission(String permission) {
-        return super.delegate.hasPermission(permission);
+        Profile profile = API.getProfileHandler().getProfile(getUniqueId());
+        if (profile == null) {
+            return false;
+        }
+
+        return profile.getRanks().hasPermission(RankWeight.ADMIN);
     }
 }

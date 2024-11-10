@@ -59,7 +59,7 @@ enum CommandMapUtil {
         }
     }
 
-    private static CommandMap getCommandMap() {
+    public static CommandMap getCommandMap() {
         try {
             return (CommandMap) COMMAND_MAP_FIELD.get(Bukkit.getServer().getPluginManager());
         } catch (Exception e) {

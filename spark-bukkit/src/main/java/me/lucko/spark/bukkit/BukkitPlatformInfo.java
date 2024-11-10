@@ -55,12 +55,6 @@ public class BukkitPlatformInfo implements PlatformInfo {
 
     @Override
     public String getMinecraftVersion() {
-        try {
-            return this.server.getMinecraftVersion();
-        } catch (NoSuchMethodError e) {
-            // ignore
-        }
-
         Class<? extends Server> serverClass = this.server.getClass();
         try {
             Field minecraftServerField = serverClass.getDeclaredField("console");

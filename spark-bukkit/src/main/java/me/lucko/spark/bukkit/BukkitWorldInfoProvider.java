@@ -24,7 +24,6 @@ import me.lucko.spark.common.platform.world.AbstractChunkInfo;
 import me.lucko.spark.common.platform.world.CountMap;
 import me.lucko.spark.common.platform.world.WorldInfoProvider;
 import org.bukkit.Chunk;
-import org.bukkit.GameRule;
 import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.block.BlockState;
@@ -34,9 +33,6 @@ import org.bukkit.entity.EntityType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class BukkitWorldInfoProvider implements WorldInfoProvider {
     private static final boolean SUPPORTS_PAPER_COUNT_METHODS;
@@ -45,24 +41,7 @@ public class BukkitWorldInfoProvider implements WorldInfoProvider {
 
     static {
         boolean supportsPaperCountMethods = false;
-        try {
-            World.class.getMethod("getEntityCount");
-            World.class.getMethod("getTileEntityCount");
-            World.class.getMethod("getChunkCount");
-            supportsPaperCountMethods = true;
-        } catch (Exception e) {
-            // ignored
-        }
-
         boolean supportsGameRules = false;
-        try {
-            Class.forName("org.bukkit.GameRule");
-            World.class.getMethod("getGameRuleValue", GameRule.class);
-            supportsGameRules = true;
-        } catch (Exception e) {
-            // ignored
-        }
-
         boolean supportsDataPacks = false;
         try {
             Server.class.getMethod("getDataPackManager");
@@ -90,28 +69,22 @@ public class BukkitWorldInfoProvider implements WorldInfoProvider {
         int chunks = 0;
 
         for (World world : this.server.getWorlds()) {
-            if (SUPPORTS_PAPER_COUNT_METHODS) {
-                entities += world.getEntityCount();
-                tileEntities += world.getTileEntityCount();
-                chunks += world.getChunkCount();
-            } else {
-                entities += world.getEntities().size();
+            entities += world.getEntities().size();
 
-                Chunk[] chunksArray = world.getLoadedChunks();
-                int nullChunks = 0;
+            Chunk[] chunksArray = world.getLoadedChunks();
+            int nullChunks = 0;
 
-                for (Chunk chunk : chunksArray) {
-                    if (chunk == null) {
-                        ++nullChunks;
-                        continue;
-                    }
-
-                    BlockState[] tileEntitiesArray = chunk.getTileEntities();
-                    tileEntities += tileEntitiesArray != null ? tileEntitiesArray.length : 0;
+            for (Chunk chunk : chunksArray) {
+                if (chunk == null) {
+                    ++nullChunks;
+                    continue;
                 }
 
-                chunks += chunksArray.length - nullChunks;
+                BlockState[] tileEntitiesArray = chunk.getTileEntities();
+                tileEntities += tileEntitiesArray != null ? tileEntitiesArray.length : 0;
             }
+
+            chunks += chunksArray.length - nullChunks;
         }
 
         return new CountsResult(players, entities, tileEntities, chunks);
@@ -139,49 +112,13 @@ public class BukkitWorldInfoProvider implements WorldInfoProvider {
 
     @Override
     public GameRulesResult pollGameRules() {
-        if (!SUPPORTS_GAMERULES) {
-            return null;
-        }
-
-        GameRulesResult data = new GameRulesResult();
-
-        boolean addDefaults = true; // add defaults in the first iteration
-        for (World world : this.server.getWorlds()) {
-            for (String gameRule : world.getGameRules()) {
-                GameRule<?> ruleObj = GameRule.getByName(gameRule);
-                if (ruleObj == null) {
-                    continue;
-                }
-
-                if (addDefaults) {
-                    Object defaultValue = world.getGameRuleDefault(ruleObj);
-                    data.putDefault(gameRule, Objects.toString(defaultValue));
-                }
-
-                Object value = world.getGameRuleValue(ruleObj);
-                data.put(gameRule, world.getName(), Objects.toString(value));
-            }
-
-            addDefaults = false;
-        }
-
-        return data;
+        return null;
     }
 
     @SuppressWarnings("removal")
     @Override
     public Collection<DataPackInfo> pollDataPacks() {
-        if (!SUPPORTS_DATAPACKS) {
-            return null;
-        }
-
-        return this.server.getDataPackManager().getDataPacks().stream()
-                .map(pack -> new DataPackInfo(
-                        pack.getTitle(),
-                        pack.getDescription(),
-                        pack.getSource().name().toLowerCase(Locale.ROOT).replace("_", "")
-                ))
-                .collect(Collectors.toList());
+        return null;
     }
 
     static final class BukkitChunkInfo extends AbstractChunkInfo<EntityType> {
